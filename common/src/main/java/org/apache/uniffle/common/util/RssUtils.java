@@ -347,7 +347,8 @@ public class RssUtils {
   }
 
   public static Map<ShuffleServerInfo, Set<Integer>> generateServerToPartitions(
-      Map<Integer, List<ShuffleServerInfo>> partitionToServers) {
+      Map<Integer, List<ShuffleServerInfo>> partitionToServers,
+      Map<Integer, Map<Integer, List<ShuffleServerInfo>>> failoverPartitionServers) {
     Map<ShuffleServerInfo, Set<Integer>> serverToPartitions = Maps.newHashMap();
     for (Map.Entry<Integer, List<ShuffleServerInfo>> entry : partitionToServers.entrySet()) {
       int partitionId = entry.getKey();
@@ -356,6 +357,18 @@ public class RssUtils {
           serverToPartitions.put(serverInfo, Sets.newHashSet(partitionId));
         } else {
           serverToPartitions.get(serverInfo).add(partitionId);
+        }
+      }
+    }
+    for (Map.Entry<Integer, Map<Integer, List<ShuffleServerInfo>>> entry : failoverPartitionServers.entrySet()) {
+      int partitionId = entry.getKey();
+      for (Map.Entry<Integer, List<ShuffleServerInfo>> replicaEntry : entry.getValue().entrySet()) {
+        for (ShuffleServerInfo serverInfo : replicaEntry.getValue()) {
+          if (!serverToPartitions.containsKey(serverInfo)) {
+            serverToPartitions.put(serverInfo, Sets.newHashSet(partitionId));
+          } else {
+            serverToPartitions.get(serverInfo).add(partitionId);
+          }
         }
       }
     }

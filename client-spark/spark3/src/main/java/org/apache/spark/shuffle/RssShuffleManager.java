@@ -704,12 +704,17 @@ public class RssShuffleManager extends RssShuffleManagerBase {
     }
     Map<Integer, List<ShuffleServerInfo>> allPartitionToServers =
         shuffleHandleInfo.getPartitionToServers();
+    Map<Integer, Map<Integer, List<ShuffleServerInfo>>> failoverPartitionServers =
+            shuffleHandleInfo.getFailoverPartitionServers();
     Map<Integer, List<ShuffleServerInfo>> requirePartitionToServers =
         allPartitionToServers.entrySet().stream()
             .filter(x -> x.getKey() >= startPartition && x.getKey() < endPartition)
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    Map<Integer, Map<Integer, List<ShuffleServerInfo>>> requireFailoverPartitionServers =
+            failoverPartitionServers.entrySet().stream().filter(x -> x.getKey() >= startPartition && x.getKey() < endPartition)
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     Map<ShuffleServerInfo, Set<Integer>> serverToPartitions =
-        RssUtils.generateServerToPartitions(requirePartitionToServers);
+        RssUtils.generateServerToPartitions(requirePartitionToServers, requireFailoverPartitionServers);
     long start = System.currentTimeMillis();
     Roaring64NavigableMap blockIdBitmap =
         getShuffleResultForMultiPart(
@@ -759,7 +764,8 @@ public class RssShuffleManager extends RssShuffleManagerBase {
         readMetrics,
         RssSparkConfig.toRssConf(sparkConf),
         dataDistributionType,
-        allPartitionToServers);
+        allPartitionToServers,
+        failoverPartitionServers);
   }
 
   @SuppressFBWarnings("REC_CATCH_EXCEPTION")
@@ -1157,6 +1163,7 @@ public class RssShuffleManager extends RssShuffleManagerBase {
         new ShuffleHandleInfo(
             shuffleId,
             rpcPartitionToShufflerServer.getPartitionToServers(),
+            rpcPartitionToShufflerServer.getFailoverPartitionServers(),
             rpcPartitionToShufflerServer.getRemoteStorageInfo());
     return shuffleHandleInfo;
   }

@@ -19,6 +19,7 @@ package org.apache.uniffle.storage.factory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 
 import com.google.common.collect.Lists;
@@ -32,13 +33,7 @@ import org.apache.uniffle.common.exception.RssException;
 import org.apache.uniffle.common.util.RssUtils;
 import org.apache.uniffle.storage.handler.api.ClientReadHandler;
 import org.apache.uniffle.storage.handler.api.ShuffleDeleteHandler;
-import org.apache.uniffle.storage.handler.impl.ComposedClientReadHandler;
-import org.apache.uniffle.storage.handler.impl.HadoopClientReadHandler;
-import org.apache.uniffle.storage.handler.impl.HadoopShuffleDeleteHandler;
-import org.apache.uniffle.storage.handler.impl.LocalFileClientReadHandler;
-import org.apache.uniffle.storage.handler.impl.LocalFileDeleteHandler;
-import org.apache.uniffle.storage.handler.impl.MemoryClientReadHandler;
-import org.apache.uniffle.storage.handler.impl.MultiReplicaClientReadHandler;
+import org.apache.uniffle.storage.handler.impl.*;
 import org.apache.uniffle.storage.request.CreateShuffleDeleteHandlerRequest;
 import org.apache.uniffle.storage.request.CreateShuffleReadHandlerRequest;
 import org.apache.uniffle.storage.util.StorageType;
@@ -60,24 +55,33 @@ public class ShuffleHandlerFactory {
     if (CollectionUtils.isEmpty(request.getShuffleServerInfoList())) {
       throw new RssException("Shuffle servers should not be empty!");
     }
+    Map<Integer, List<ShuffleServerInfo>> failoverShuffleServerInfoList =
+        request.getFailoverShuffleServerInfoList();
     if (request.getShuffleServerInfoList().size() > 1) {
       List<ClientReadHandler> handlers = Lists.newArrayList();
-      request
-          .getShuffleServerInfoList()
-          .forEach(
-              (ssi) -> {
-                handlers.add(
-                    ShuffleHandlerFactory.getInstance()
-                        .createSingleReplicaClientReadHandler(request, ssi));
-              });
+      List<ShuffleServerInfo> shuffleServerInfoList = request.getShuffleServerInfoList();
+      for (int i = 0; i < shuffleServerInfoList.size(); i++) {
+        List<ShuffleServerInfo> replicaShuffleServerInfos = Lists.newArrayList();
+        replicaShuffleServerInfos.add(shuffleServerInfoList.get(i));
+        if (failoverShuffleServerInfoList != null && failoverShuffleServerInfoList.size() > i) {
+          replicaShuffleServerInfos.addAll(failoverShuffleServerInfoList.get(i));
+        }
+        handlers.add(
+            ShuffleHandlerFactory.getInstance()
+                .createSingleReplicaForMutiServerClientReadHandler(
+                    request, replicaShuffleServerInfos));
+      }
       return new MultiReplicaClientReadHandler(
           handlers,
           request.getShuffleServerInfoList(),
           request.getExpectBlockIds(),
           request.getProcessBlockIds());
     } else {
-      ShuffleServerInfo serverInfo = request.getShuffleServerInfoList().get(0);
-      return createSingleReplicaClientReadHandler(request, serverInfo);
+      List<ShuffleServerInfo> shuffleServerInfoList = request.getShuffleServerInfoList();
+      if (failoverShuffleServerInfoList != null && !failoverShuffleServerInfoList.isEmpty()) {
+        shuffleServerInfoList.addAll(failoverShuffleServerInfoList.get(0));
+      }
+      return createSingleReplicaForMutiServerClientReadHandler(request, shuffleServerInfoList);
     }
   }
 
@@ -114,6 +118,21 @@ public class ShuffleHandlerFactory {
     }
 
     return new ComposedClientReadHandler(serverInfo, handlers);
+  }
+
+  public ClientReadHandler createSingleReplicaForMutiServerClientReadHandler(
+      CreateShuffleReadHandlerRequest request,
+      List<ShuffleServerInfo> singleReplicaShuffleServerInfoList) {
+    List<ClientReadHandler> handlers = Lists.newArrayList();
+    singleReplicaShuffleServerInfoList.forEach(
+        (ssi) -> {
+          handlers.add(
+              ShuffleHandlerFactory.getInstance()
+                  .createSingleReplicaClientReadHandler(request, ssi));
+        });
+    return new SingelReplicaClientReadHandler(
+        handlers,
+        request.getShuffleServerInfoList());
   }
 
   private ClientReadHandler getMemoryClientReadHandler(

@@ -18,6 +18,7 @@
 package org.apache.uniffle.storage.request;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.roaringbitmap.longlong.Roaring64NavigableMap;
@@ -43,6 +44,7 @@ public class CreateShuffleReadHandlerRequest {
   private RssBaseConf rssBaseConf;
   private Configuration hadoopConf;
   private List<ShuffleServerInfo> shuffleServerInfoList;
+  private Map<Integer, List<ShuffleServerInfo>> failoverShuffleServerInfoList;
   private Roaring64NavigableMap expectBlockIds;
   private Roaring64NavigableMap processBlockIds;
   private ShuffleDataDistributionType distributionType;
@@ -143,6 +145,15 @@ public class CreateShuffleReadHandlerRequest {
 
   public void setShuffleServerInfoList(List<ShuffleServerInfo> shuffleServerInfoList) {
     this.shuffleServerInfoList = shuffleServerInfoList;
+  }
+
+  public Map<Integer, List<ShuffleServerInfo>> getFailoverShuffleServerInfoList() {
+    return failoverShuffleServerInfoList;
+  }
+
+  public void setFailoverShuffleServerInfoList(
+      Map<Integer, List<ShuffleServerInfo>> failoverShuffleServerInfoList) {
+    this.failoverShuffleServerInfoList = failoverShuffleServerInfoList;
   }
 
   public Configuration getHadoopConf() {

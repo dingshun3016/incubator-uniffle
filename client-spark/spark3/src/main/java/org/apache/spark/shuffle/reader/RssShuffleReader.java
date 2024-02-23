@@ -60,6 +60,7 @@ import static org.apache.uniffle.common.util.Constants.DRIVER_HOST;
 public class RssShuffleReader<K, C> implements ShuffleReader<K, C> {
   private static final Logger LOG = LoggerFactory.getLogger(RssShuffleReader.class);
   private final Map<Integer, List<ShuffleServerInfo>> partitionToShuffleServers;
+  private final Map<Integer, Map<Integer, List<ShuffleServerInfo>>> failoverPartitionServers;
 
   private String appId;
   private int shuffleId;
@@ -96,7 +97,8 @@ public class RssShuffleReader<K, C> implements ShuffleReader<K, C> {
       ShuffleReadMetrics readMetrics,
       RssConf rssConf,
       ShuffleDataDistributionType dataDistributionType,
-      Map<Integer, List<ShuffleServerInfo>> allPartitionToServers) {
+      Map<Integer, List<ShuffleServerInfo>> allPartitionToServers,
+      Map<Integer, Map<Integer, List<ShuffleServerInfo>>> failoverPartitionServers) {
     this.appId = rssShuffleHandle.getAppId();
     this.startPartition = startPartition;
     this.endPartition = endPartition;
@@ -115,6 +117,7 @@ public class RssShuffleReader<K, C> implements ShuffleReader<K, C> {
     this.hadoopConf = hadoopConf;
     this.readMetrics = readMetrics;
     this.partitionToShuffleServers = allPartitionToServers;
+    this.failoverPartitionServers = failoverPartitionServers;
     this.rssConf = rssConf;
     this.dataDistributionType = dataDistributionType;
   }
@@ -241,6 +244,7 @@ public class RssShuffleReader<K, C> implements ShuffleReader<K, C> {
           continue;
         }
         List<ShuffleServerInfo> shuffleServerInfoList = partitionToShuffleServers.get(partition);
+        Map<Integer, List<ShuffleServerInfo>> failoverShuffleServerInfoList = failoverPartitionServers.get(partition);
         // This mechanism of expectedTaskIdsBitmap filter is to filter out the most of data.
         // especially for AQE skew optimization
         boolean expectedTaskIdsBitmapFilterEnable =
@@ -259,6 +263,7 @@ public class RssShuffleReader<K, C> implements ShuffleReader<K, C> {
                         .blockIdBitmap(partitionToExpectBlocks.get(partition))
                         .taskIdBitmap(taskIdBitmap)
                         .shuffleServerInfoList(shuffleServerInfoList)
+                        .failoverShuffleServerInfoList(failoverShuffleServerInfoList)
                         .hadoopConf(hadoopConf)
                         .shuffleDataDistributionType(dataDistributionType)
                         .expectedTaskIdsBitmapFilterEnable(expectedTaskIdsBitmapFilterEnable)

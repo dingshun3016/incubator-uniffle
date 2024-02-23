@@ -208,6 +208,28 @@ public class ShuffleManagerGrpcService extends ShuffleManagerImplBase {
                 .build();
         protopartitionToServers.put(integerListEntry.getKey(), getShuffleServerListResponse);
       }
+      Map<Integer, Map<Integer, List<ShuffleServerInfo>>> failoverPartitionServers = shuffleHandleInfoByShuffleId.getFailoverPartitionServers();
+      Map<Integer, RssProtos.GetFailoverShuffleServerListResponse> protoFailoverPartitionServers =
+              JavaUtils.newConcurrentMap();
+      for (Map.Entry<Integer, Map<Integer, List<ShuffleServerInfo>>> partitionListEntry :
+              failoverPartitionServers.entrySet()) {
+        Map<Integer, RssProtos.GetShuffleServerListResponse> protoReplicaToServers =
+                JavaUtils.newConcurrentMap();
+        for (Map.Entry<Integer, List<ShuffleServerInfo>> replicaListEntry : partitionListEntry.getValue().entrySet()) {
+          List<RssProtos.ShuffleServerId> shuffleServerIds =
+                  ShuffleServerInfo.toProto(replicaListEntry.getValue());
+          RssProtos.GetShuffleServerListResponse getShuffleServerListResponse =
+                  RssProtos.GetShuffleServerListResponse.newBuilder()
+                          .addAllServers(shuffleServerIds)
+                          .build();
+          protoReplicaToServers.put(replicaListEntry.getKey(), getShuffleServerListResponse);
+        }
+        RssProtos.GetFailoverShuffleServerListResponse getFailoverShuffleServerListResponse =
+                RssProtos.GetFailoverShuffleServerListResponse.newBuilder()
+                        .putAllReplicaToShuffleServer(protoReplicaToServers)
+                        .build();
+        protoFailoverPartitionServers.put(partitionListEntry.getKey(), getFailoverShuffleServerListResponse);
+      }
       RemoteStorageInfo remoteStorage = shuffleHandleInfoByShuffleId.getRemoteStorage();
       RssProtos.RemoteStorageInfo.Builder protosRemoteStage =
           RssProtos.RemoteStorageInfo.newBuilder()
@@ -218,6 +240,7 @@ public class ShuffleManagerGrpcService extends ShuffleManagerImplBase {
               .setStatus(code)
               .putAllPartitionToShuffleServer(protopartitionToServers)
               .setRemoteStorageInfo(protosRemoteStage)
+              .putAllFailoverPartitionToShuffleServer(protoFailoverPartitionServers)
               .build();
     } else {
       code = RssProtos.StatusCode.INVALID_REQUEST;
@@ -225,6 +248,7 @@ public class ShuffleManagerGrpcService extends ShuffleManagerImplBase {
           RssProtos.PartitionToShuffleServerResponse.newBuilder()
               .setStatus(code)
               .putAllPartitionToShuffleServer(null)
+              .putAllFailoverPartitionToShuffleServer(null)
               .build();
     }
     responseObserver.onNext(reply);

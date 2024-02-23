@@ -387,6 +387,10 @@ message GetShuffleServerListResponse {
   repeated ShuffleServerId servers = 1;
 }
 
+message GetFailoverShuffleServerListResponse {
+  map<int32,GetShuffleServerListResponse> replicaToShuffleServer = 1;
+}
+
 message GetShuffleServerNumResponse {
   int32 num = 1;
 }
@@ -546,6 +550,7 @@ message PartitionToShuffleServerResponse {
   map<int32,GetShuffleServerListResponse> partitionToShuffleServer = 2;
   RemoteStorageInfo remote_storage_info = 3;
   string msg = 4;
+  map<int32,GetFailoverShuffleServerListResponse> failoverPartitionToShuffleServer = 5;
 }
 
 message RemoteStorageInfo{

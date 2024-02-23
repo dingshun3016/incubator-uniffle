@@ -33,23 +33,30 @@ import org.apache.uniffle.proto.RssProtos;
 public class RssPartitionToShuffleServerResponse extends ClientResponse {
 
   private Map<Integer, List<ShuffleServerInfo>> partitionToServers;
+  private Map<Integer, Map<Integer, List<ShuffleServerInfo>>> failoverPartitionServers;
   private Set<ShuffleServerInfo> shuffleServersForData;
   private RemoteStorageInfo remoteStorageInfo;
 
   public RssPartitionToShuffleServerResponse(
-      StatusCode statusCode,
-      String message,
-      Map<Integer, List<ShuffleServerInfo>> partitionToServers,
-      Set<ShuffleServerInfo> shuffleServersForData,
-      RemoteStorageInfo remoteStorageInfo) {
+          StatusCode statusCode,
+          String message,
+          Map<Integer, List<ShuffleServerInfo>> partitionToServers,
+          Map<Integer, Map<Integer, List<ShuffleServerInfo>>> failoverPartitionServers,
+          Set<ShuffleServerInfo> shuffleServersForData,
+          RemoteStorageInfo remoteStorageInfo) {
     super(statusCode, message);
     this.partitionToServers = partitionToServers;
+    this.failoverPartitionServers = failoverPartitionServers;
     this.remoteStorageInfo = remoteStorageInfo;
     this.shuffleServersForData = shuffleServersForData;
   }
 
   public Map<Integer, List<ShuffleServerInfo>> getPartitionToServers() {
     return partitionToServers;
+  }
+
+  public Map<Integer, Map<Integer, List<ShuffleServerInfo>>> getFailoverPartitionServers() {
+    return failoverPartitionServers;
   }
 
   public Set<ShuffleServerInfo> getShuffleServersForData() {
@@ -87,6 +94,36 @@ public class RssPartitionToShuffleServerResponse extends ClientResponse {
     for (List<ShuffleServerInfo> ssis : rpcPartitionToShuffleServerInfos.values()) {
       rpcShuffleServersForData.addAll(ssis);
     }
+
+    Map<Integer, Map<Integer, List<ShuffleServerInfo>>> rpcPartitionToFailoverShuffleServerInfos = Maps.newHashMap();
+    Map<Integer, RssProtos.GetFailoverShuffleServerListResponse> failoverPartitionToShuffleServerMap =
+            response.getFailoverPartitionToShuffleServerMap();
+    Set<Map.Entry<Integer, RssProtos.GetFailoverShuffleServerListResponse>> failoverPartitionEntries =
+            failoverPartitionToShuffleServerMap.entrySet();
+    for (Map.Entry<Integer, RssProtos.GetFailoverShuffleServerListResponse> entry : failoverPartitionEntries) {
+      Integer partitionId = entry.getKey();
+      Map<Integer, RssProtos.GetShuffleServerListResponse> replicaToShuffleServerMap =
+              entry.getValue().getReplicaToShuffleServerMap();
+
+      Map<Integer, List<ShuffleServerInfo>> rpcReplicaToFailoverShuffleServerInfos = Maps.newHashMap();
+      for (Map.Entry<Integer, RssProtos.GetShuffleServerListResponse> replicaEntry : replicaToShuffleServerMap.entrySet()) {
+        Integer replicaIdx = replicaEntry.getKey();
+        List<ShuffleServerInfo> replicaShuffleServerInfos = Lists.newArrayList();
+        List<? extends RssProtos.ShuffleServerIdOrBuilder> replicaServersOrBuilderList =
+                replicaEntry.getValue().getServersOrBuilderList();
+        for (RssProtos.ShuffleServerIdOrBuilder shuffleServerIdOrBuilder : replicaServersOrBuilderList) {
+          replicaShuffleServerInfos.add(
+                  new ShuffleServerInfo(
+                          shuffleServerIdOrBuilder.getId(),
+                          shuffleServerIdOrBuilder.getIp(),
+                          shuffleServerIdOrBuilder.getPort(),
+                          shuffleServerIdOrBuilder.getNettyPort()));
+        }
+        rpcReplicaToFailoverShuffleServerInfos.put(replicaIdx, replicaShuffleServerInfos);
+      }
+      rpcPartitionToFailoverShuffleServerInfos.put(partitionId, rpcReplicaToFailoverShuffleServerInfos);
+    }
+
     RssProtos.RemoteStorageInfo protoRemoteStorageInfo = response.getRemoteStorageInfo();
     RemoteStorageInfo rpcRemoteStorageInfo =
         new RemoteStorageInfo(
@@ -95,6 +132,7 @@ public class RssPartitionToShuffleServerResponse extends ClientResponse {
         StatusCode.valueOf(response.getStatus().name()),
         response.getMsg(),
         rpcPartitionToShuffleServerInfos,
+        rpcPartitionToFailoverShuffleServerInfos,
         rpcShuffleServersForData,
         rpcRemoteStorageInfo);
   }

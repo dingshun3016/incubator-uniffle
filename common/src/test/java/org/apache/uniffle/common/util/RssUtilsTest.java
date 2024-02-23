@@ -255,8 +255,10 @@ public class RssUtilsTest {
     partitionToServers.put(2, Lists.newArrayList(server3, server4));
     partitionToServers.put(3, Lists.newArrayList(server1, server2));
     partitionToServers.put(4, Lists.newArrayList(server3, server4));
+    Map<Integer, Map<Integer, List<ShuffleServerInfo>>> failoverPartitionServers =
+        Maps.newHashMap();
     Map<ShuffleServerInfo, Set<Integer>> serverToPartitions =
-        RssUtils.generateServerToPartitions(partitionToServers);
+        RssUtils.generateServerToPartitions(partitionToServers, failoverPartitionServers);
     assertEquals(4, serverToPartitions.size());
     assertEquals(serverToPartitions.get(server1), Sets.newHashSet(1, 3));
     assertEquals(serverToPartitions.get(server2), Sets.newHashSet(1, 3));

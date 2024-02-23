@@ -19,6 +19,7 @@ package org.apache.uniffle.client.impl;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -52,6 +53,7 @@ public class ShuffleReadClientImpl implements ShuffleReadClient {
 
   private static final Logger LOG = LoggerFactory.getLogger(ShuffleReadClientImpl.class);
   private List<ShuffleServerInfo> shuffleServerInfoList;
+  private Map<Integer, List<ShuffleServerInfo>> failoverShuffleServerInfoList;
   private int shuffleId;
   private int partitionId;
   private ByteBuffer readBuffer;
@@ -122,6 +124,7 @@ public class ShuffleReadClientImpl implements ShuffleReadClient {
     this.taskIdBitmap = builder.getTaskIdBitmap();
     this.idHelper = builder.getIdHelper();
     this.shuffleServerInfoList = builder.getShuffleServerInfoList();
+    this.failoverShuffleServerInfoList = builder.getFailoverShuffleServerInfoList();
 
     CreateShuffleReadHandlerRequest request = new CreateShuffleReadHandlerRequest();
     request.setStorageType(builder.getStorageType());
@@ -134,6 +137,7 @@ public class ShuffleReadClientImpl implements ShuffleReadClient {
     request.setReadBufferSize((int) builder.getReadBufferSize());
     request.setStorageBasePath(builder.getBasePath());
     request.setShuffleServerInfoList(shuffleServerInfoList);
+    request.setFailoverShuffleServerInfoList(failoverShuffleServerInfoList);
     request.setHadoopConf(builder.getHadoopConf());
     request.setExpectBlockIds(blockIdBitmap);
     request.setProcessBlockIds(processedBlockIds);

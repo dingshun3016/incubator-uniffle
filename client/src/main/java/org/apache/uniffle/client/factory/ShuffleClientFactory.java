@@ -18,6 +18,7 @@
 package org.apache.uniffle.client.factory;
 
 import java.util.List;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.roaringbitmap.longlong.Roaring64NavigableMap;
@@ -202,6 +203,7 @@ public class ShuffleClientFactory {
     private Roaring64NavigableMap blockIdBitmap;
     private Roaring64NavigableMap taskIdBitmap;
     private List<ShuffleServerInfo> shuffleServerInfoList;
+    private Map<Integer, List<ShuffleServerInfo>> failoverShuffleServerInfoList;
     private Configuration hadoopConf;
     private IdHelper idHelper;
     private ShuffleDataDistributionType shuffleDataDistributionType;
@@ -255,6 +257,12 @@ public class ShuffleClientFactory {
 
     public ReadClientBuilder shuffleServerInfoList(List<ShuffleServerInfo> shuffleServerInfoList) {
       this.shuffleServerInfoList = shuffleServerInfoList;
+      return this;
+    }
+
+    public ReadClientBuilder failoverShuffleServerInfoList(
+        Map<Integer, List<ShuffleServerInfo>> failoverShuffleServerInfoList) {
+      this.failoverShuffleServerInfoList = failoverShuffleServerInfoList;
       return this;
     }
 
@@ -346,6 +354,10 @@ public class ShuffleClientFactory {
 
     public List<ShuffleServerInfo> getShuffleServerInfoList() {
       return shuffleServerInfoList;
+    }
+
+    public Map<Integer, List<ShuffleServerInfo>> getFailoverShuffleServerInfoList() {
+      return failoverShuffleServerInfoList;
     }
 
     public Configuration getHadoopConf() {

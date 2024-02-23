@@ -64,6 +64,21 @@ public class ShuffleHandleInfo implements Serializable {
     this.remoteStorage = storageInfo;
   }
 
+  public ShuffleHandleInfo(
+          int shuffleId,
+          Map<Integer, List<ShuffleServerInfo>> partitionToServers,
+          Map<Integer, Map<Integer, List<ShuffleServerInfo>>> failoverPartitionServers,
+          RemoteStorageInfo storageInfo) {
+    this.shuffleId = shuffleId;
+    this.partitionToServers = partitionToServers;
+    this.shuffleServersForData = Sets.newHashSet();
+    this.failoverPartitionServers = failoverPartitionServers;
+    for (List<ShuffleServerInfo> ssis : partitionToServers.values()) {
+      this.shuffleServersForData.addAll(ssis);
+    }
+    this.remoteStorage = storageInfo;
+  }
+
   public Map<Integer, List<ShuffleServerInfo>> getPartitionToServers() {
     return partitionToServers;
   }

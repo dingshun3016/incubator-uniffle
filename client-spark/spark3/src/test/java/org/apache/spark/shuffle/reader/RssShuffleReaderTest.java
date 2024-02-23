@@ -77,6 +77,7 @@ public class RssShuffleReaderTest extends AbstractRssReaderTest {
     partitionToServers.put(0, Lists.newArrayList(ssi));
     partitionToServers.put(1, Lists.newArrayList(ssi));
     when(handleMock.getPartitionToServers()).thenReturn(partitionToServers);
+    Map<Integer, Map<Integer, List<ShuffleServerInfo>>> failoverPartitionServers = Maps.newConcurrentMap();
     when(dependencyMock.serializer()).thenReturn(KRYO_SERIALIZER);
     TaskContext contextMock = mock(TaskContext.class);
     when(contextMock.attemptNumber()).thenReturn(1);
@@ -110,7 +111,8 @@ public class RssShuffleReaderTest extends AbstractRssReaderTest {
                 new ShuffleReadMetrics(),
                 rssConf,
                 ShuffleDataDistributionType.NORMAL,
-                partitionToServers));
+                partitionToServers,
+                failoverPartitionServers));
     validateResult(rssShuffleReaderSpy.read(), expectedData, 10);
 
     writeTestData(
@@ -133,7 +135,8 @@ public class RssShuffleReaderTest extends AbstractRssReaderTest {
                 new ShuffleReadMetrics(),
                 rssConf,
                 ShuffleDataDistributionType.NORMAL,
-                partitionToServers));
+                partitionToServers,
+                failoverPartitionServers));
     validateResult(rssShuffleReaderSpy1.read(), expectedData, 18);
 
     RssShuffleReader<String, String> rssShuffleReaderSpy2 =
@@ -153,7 +156,8 @@ public class RssShuffleReaderTest extends AbstractRssReaderTest {
                 new ShuffleReadMetrics(),
                 rssConf,
                 ShuffleDataDistributionType.NORMAL,
-                partitionToServers));
+                partitionToServers,
+                failoverPartitionServers));
     validateResult(rssShuffleReaderSpy2.read(), Maps.newHashMap(), 0);
   }
 }
