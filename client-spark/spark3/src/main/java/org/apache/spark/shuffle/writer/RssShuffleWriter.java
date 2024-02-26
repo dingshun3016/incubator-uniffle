@@ -436,8 +436,8 @@ public class RssShuffleWriter<K, V, C> extends ShuffleWriter<K, V> {
     for (Long failedBlockId : failedBlockIds) {
       failedBlockTracker.getFailedBlockStatus(failedBlockId).stream()
           // todo: more status need reassign
-          .filter(
-              trackingBlockStatus -> trackingBlockStatus.getStatusCode() == StatusCode.NO_BUFFER)
+//          .filter(
+//              trackingBlockStatus -> trackingBlockStatus.getStatusCode() == StatusCode.NO_BUFFER)
           .forEach(trackingBlockStatus -> resendBlockStatusSet.add(trackingBlockStatus));
     }
     return resendBlockStatusSet;
